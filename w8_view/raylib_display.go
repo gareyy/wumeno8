@@ -1,8 +1,6 @@
 package w8_view
 
 import (
-	"fmt"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 	con "wumeno.8/constants"
 )
@@ -22,9 +20,6 @@ func (rayl *Raylib) Start() {
 		rl.ClearBackground(rl.Black)
 		rayl.UpdateMatrix()
 		rl.EndDrawing()
-		if jj := rl.GetKeyPressed(); jj != 0 {
-			fmt.Println(string(jj))
-		}
 	}
 }
 
@@ -53,4 +48,14 @@ func (rayl *Raylib) CopyMatrix(newMatrix [con.WIDTH][con.HEIGHT]bool) {
 	for v := range con.WIDTH {
 		rayl.Matrix[v] = newMatrix[v]
 	}
+}
+
+type inputFunc func([16]bool)
+
+func (rayl *Raylib) TrasmitHeldKeys(fn inputFunc) {
+	var heldKeys [16]bool
+	for i, v := range con.KNOWN_KB {
+		heldKeys[i] = rl.IsKeyDown(v)
+	}
+	fn(heldKeys)
 }

@@ -14,18 +14,26 @@ var gol = &w8_model.GameOfLife{}
 
 func main() {
 	// use tickers for interpreter https://gobyexample.com/tickers
-	ticker := time.NewTicker(10 * time.Millisecond)
+	modelTick := time.NewTicker(10 * time.Millisecond)
+	inputTick := time.NewTicker(time.Second / 60)
+	done := make(chan bool)
+
 	gol.Start()
 
 	go func() {
 		for {
 			select {
-			case <-ticker.C:
+			case <-done:
+				return
+			case <-modelTick.C:
 				gol.UpdateCycle()
 				rayl.CopyMatrix(gol.LifeMatrix)
-				gol.Terminate()
+			case <-inputTick.C:
+				rayl.TrasmitHeldKeys(gol.ReceiveInput)
 			}
 		}
 	}()
+
 	rayl.Start()
+	done <- true
 }

@@ -9,6 +9,7 @@ import (
 type GameOfLife struct {
 	// inherits some fucking interface for games or whatever
 	LifeMatrix [con.WIDTH][con.HEIGHT]bool
+	inputs     [16]bool
 }
 
 /*
@@ -26,15 +27,17 @@ func (gol *GameOfLife) Start() {
 	gol.LifeMatrix[10][3] = true
 
 	// make spaceship (glider)
-
 	gol.LifeMatrix[3][3] = true
 	gol.LifeMatrix[4][3] = true
 	gol.LifeMatrix[5][3] = true
 	gol.LifeMatrix[5][2] = true
 	gol.LifeMatrix[4][1] = true
+
+	// TODO (but never): add ability to pause and play, place cells, etc
 }
 
 func (gol *GameOfLife) UpdateCycle() {
+
 	var nextMatrix [con.WIDTH][con.HEIGHT]bool
 
 	for i, row := range gol.LifeMatrix {
@@ -75,4 +78,8 @@ func (gol GameOfLife) countNeighbours(x, y int) int {
 		}
 	}
 	return aliveNeighbours
+}
+
+func (gol *GameOfLife) ReceiveInput(received [16]bool) {
+	gol.inputs = received
 }
