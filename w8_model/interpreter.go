@@ -2,6 +2,7 @@ package w8_model
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"os"
 
 	con "wumeno.8/constants"
@@ -45,16 +46,7 @@ func (in *Interpreter) Start() {
 	}
 
 	// load program
-	program, err := os.ReadFile("IBM Logo.ch8")
-	/*
-		this program only has
-		00E0 (clear screen)
-		1NNN (jump)
-		6XNN (set register VX)
-		7XNN (add value to register VX)
-		ANNN (set index register I)
-		DXYN (display/draw)
-	*/
+	program, err := os.ReadFile("test_opcode.ch8")
 	if err != nil {
 		panic(err)
 	}
@@ -75,13 +67,47 @@ func (in *Interpreter) UpdateCycle() {
 		case 0x00E0:
 			// clear screen
 			in.DisplayMatrix = [con.WIDTH][con.HEIGHT]bool{}
+		case 0x00EE:
+			//return from subroutine
+			increase = 0
+			in.programCounter = in.stack[in.stackPointer]
+			in.stackPointer--
 		default:
+			// execute machine subroutine, ignore
 			break
 		}
 	case 0x1000:
 		// jump
 		increase = 0
 		in.programCounter = opcode & 0x0FFF
+		fmt.Printf("jumped to %.3X\n", in.programCounter)
+	case 0x2000:
+		// execute subroutine at NNN
+		in.stack[in.stackPointer] = in.programCounter
+		increase = 0
+		in.stackPointer++
+		in.programCounter = opcode & 0x0FFF
+	case 0x3000:
+		// skip next instruction if vx == nn
+		vx := in.registerV[(opcode&0x0F00)>>8]
+		nn := byte(opcode & 0x00FF)
+		if vx == nn {
+			increase = 4
+		}
+	case 0x4000:
+		// skip next instruction if vx != nn
+		vx := in.registerV[(opcode&0x0F00)>>8]
+		nn := byte(opcode & 0x00FF)
+		if vx != nn {
+			increase = 4
+		}
+	case 0x5000:
+		// skip next instruction if vx == vy
+		vx := in.registerV[(opcode&0x0F00)>>8]
+		vy := in.registerV[(opcode&0x00F0)>>4]
+		if vx == vy {
+			increase = 4
+		}
 	case 0x6000:
 		// set reg X to NN
 		register := (opcode & 0x0F00) >> 8
@@ -92,9 +118,29 @@ func (in *Interpreter) UpdateCycle() {
 		register := (opcode & 0x0F00) >> 8
 		val := byte(opcode & 0x00FF)
 		in.registerV[register] += val
+	case 0x8000:
+		// uh oh
+		switch opcode & 0x000F {
+
+		}
+	case 0x9000:
+		// skip next instruction if vx != vy
+		vx := in.registerV[(opcode&0x0F00)>>8]
+		vy := in.registerV[(opcode&0x00F0)>>4]
+		if vx != vy {
+			increase = 4
+		}
 	case 0xA000:
 		// set I to NNN
 		in.indexRegister = opcode & 0x0FFF
+	case 0xB000:
+		// jump with offset, uses super chip implementation
+		vx := in.registerV[(opcode&0x0F00)>>8]
+		increase = 0
+		in.programCounter = (opcode & 0x0FFF) + uint16(vx)
+	case 0xC000:
+		// set X to random
+		in.registerV[(opcode&0x0F00)>>8] = byte((opcode & 0x00FF) & uint16(rand.IntN(100)))
 	case 0xD000:
 		// draw time!!
 		x := in.registerV[int32((opcode&0x0F00)>>8)]
@@ -106,7 +152,6 @@ func (in *Interpreter) UpdateCycle() {
 			for xoff := range 8 {
 				pos := &in.DisplayMatrix[int32(x)+int32(xoff)][int32(y)+int32(yoff)]
 				if *pos && line[xoff] {
-					fmt.Println("hey!")
 					in.registerV[0xF] = 1
 				}
 				*pos = bool(line[xoff] != *pos)
@@ -132,11 +177,11 @@ func (in *Interpreter) UpdateCycle() {
 }
 
 func (in *Interpreter) ReceiveInput(received [16]bool) {
-
+	in.inputs = received
 }
 
 func (in *Interpreter) Terminate() {
-
+	os.Exit(0)
 }
 
 func byteToBoolArray(b byte) [8]bool {
