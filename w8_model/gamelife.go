@@ -8,8 +8,8 @@ import (
 
 type GameOfLife struct {
 	// inherits some fucking interface for games or whatever
-	LifeMatrix [con.WIDTH][con.HEIGHT]bool
-	inputs     [16]bool
+	DisplayMatrix [con.WIDTH][con.HEIGHT]bool
+	inputs        [16]bool
 }
 
 /*
@@ -22,16 +22,16 @@ wraparound count =
 
 func (gol *GameOfLife) Start() {
 	// make block
-	gol.LifeMatrix[10][1] = true
-	gol.LifeMatrix[10][2] = true
-	gol.LifeMatrix[10][3] = true
+	gol.DisplayMatrix[10][1] = true
+	gol.DisplayMatrix[10][2] = true
+	gol.DisplayMatrix[10][3] = true
 
 	// make spaceship (glider)
-	gol.LifeMatrix[3][3] = true
-	gol.LifeMatrix[4][3] = true
-	gol.LifeMatrix[5][3] = true
-	gol.LifeMatrix[5][2] = true
-	gol.LifeMatrix[4][1] = true
+	gol.DisplayMatrix[3][3] = true
+	gol.DisplayMatrix[4][3] = true
+	gol.DisplayMatrix[5][3] = true
+	gol.DisplayMatrix[5][2] = true
+	gol.DisplayMatrix[4][1] = true
 
 	// TODO (but never): add ability to pause and play, place cells, etc
 }
@@ -40,7 +40,7 @@ func (gol *GameOfLife) UpdateCycle() {
 
 	var nextMatrix [con.WIDTH][con.HEIGHT]bool
 
-	for i, row := range gol.LifeMatrix {
+	for i, row := range gol.DisplayMatrix {
 		for j, cell := range row {
 			total := gol.countNeighbours(i, j)
 			nextCell := &nextMatrix[i][j]
@@ -55,7 +55,7 @@ func (gol *GameOfLife) UpdateCycle() {
 	}
 	// then deep copy
 	for i := range con.WIDTH {
-		gol.LifeMatrix[i] = nextMatrix[i]
+		gol.DisplayMatrix[i] = nextMatrix[i]
 	}
 }
 
@@ -72,7 +72,7 @@ func (gol GameOfLife) countNeighbours(x, y int) int {
 			}
 			col := (x + i + int(con.WIDTH)) % int(con.WIDTH)
 			row := (y + j + int(con.HEIGHT)) % int(con.HEIGHT)
-			if gol.LifeMatrix[col][row] {
+			if gol.DisplayMatrix[col][row] {
 				aliveNeighbours++
 			}
 		}

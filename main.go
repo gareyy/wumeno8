@@ -10,15 +10,15 @@ import (
 )
 
 var rayl = &w8_view.Raylib{}
-var gol = &w8_model.GameOfLife{}
+
+var interpreter = &w8_model.Interpreter{}
 
 func main() {
 	// use tickers for interpreter https://gobyexample.com/tickers
 	modelTick := time.NewTicker(10 * time.Millisecond)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-
-	gol.Start()
+	interpreter.Start()
 
 	go func() {
 		for {
@@ -26,10 +26,10 @@ func main() {
 			case <-done:
 				return
 			case <-modelTick.C:
-				gol.UpdateCycle()
-				rayl.CopyMatrix(gol.LifeMatrix)
+				interpreter.UpdateCycle()
+				rayl.CopyMatrix(interpreter.DisplayMatrix)
 			case <-inputTick.C:
-				rayl.TrasmitHeldKeys(gol.ReceiveInput)
+				rayl.TrasmitHeldKeys(interpreter.ReceiveInput)
 			}
 		}
 	}()
