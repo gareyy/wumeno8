@@ -11,6 +11,7 @@ type Raylib struct {
 }
 
 func (rayl *Raylib) Start() {
+	rl.SetTraceLogLevel(rl.LogError) // i dont care about raylib rn
 	rl.InitWindow(con.WIDTH*con.PIXEL_SIZE, con.HEIGHT*con.PIXEL_SIZE, "wumeno 8 chip 8 interpreter")
 	rl.SetTargetFPS(60)
 	defer rayl.Terminate()
