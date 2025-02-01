@@ -9,12 +9,16 @@ type Raylib struct {
 	// implements InputOutput interface
 	Matrix   [con.WIDTH][con.HEIGHT]bool
 	heldKeys [16]bool
+	Beep     rl.Sound
 }
 
 func (rayl *Raylib) Start() {
 	rl.SetTraceLogLevel(rl.LogError) // i dont care about raylib rn
 	rl.InitWindow(con.WIDTH*con.PIXEL_SIZE, con.HEIGHT*con.PIXEL_SIZE, "wumeno 8 chip 8 interpreter")
 	rl.SetTargetFPS(60)
+	rl.InitAudioDevice()
+
+	rayl.Beep = rl.LoadSound("blipSelect.wav")
 	defer rayl.Terminate()
 
 	for !rl.WindowShouldClose() {
@@ -39,6 +43,8 @@ func (rayl *Raylib) UpdateMatrix() {
 }
 
 func (rayl Raylib) Terminate() {
+	rl.UnloadSound(rayl.Beep)
+	rl.CloseAudioDevice()
 	rl.CloseWindow()
 }
 
@@ -67,4 +73,8 @@ func GetHeldKey(key int32) bool {
 
 func GetReleasedKey(key int32) bool {
 	return rl.IsKeyReleased(key)
+}
+
+func (rayl *Raylib) PlayBeep() {
+	rl.PlaySound(rayl.Beep)
 }

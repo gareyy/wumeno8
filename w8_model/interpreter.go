@@ -184,7 +184,7 @@ func (in *Interpreter) UpdateCycle() {
 		in.programCounter = (opcode & 0x0FFF) + uint16(vx)
 	case 0xC000:
 		// set X to random
-		in.registerV[(opcode&0x0F00)>>8] = byte((opcode & 0x00FF) & uint16(rand.IntN(100)))
+		in.registerV[(opcode&0x0F00)>>8] = byte((opcode & 0x00FF) & uint16(rand.IntN(256)))
 	case 0xD000:
 		// draw time!!
 		x := int32(in.registerV[int32((opcode&0x0F00)>>8)]) % con.WIDTH
@@ -283,14 +283,14 @@ func (in *Interpreter) Terminate() {
 	os.Exit(0)
 }
 
-func (in *Interpreter) TimerUpdate() {
+func (in *Interpreter) TimerUpdate(soundFunc func()) {
 	// timers
 	if in.delayTimer > 0 {
 		in.delayTimer--
 	}
 	if in.soundTimer > 0 {
-		if in.soundTimer == 1 {
-			fmt.Println("BEEP!!!!")
+		if in.soundTimer >= 1 {
+			soundFunc()
 		}
 		in.soundTimer--
 	}

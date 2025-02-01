@@ -19,7 +19,7 @@ func main() {
 	modelTick := time.NewTicker(2 * time.Millisecond)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-	program, err := os.ReadFile("delay_timer_test.ch8")
+	program, err := os.ReadFile("7-beep.ch8")
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func main() {
 				interpreter.UpdateCycle()
 				rayl.CopyMatrix(interpreter.DisplayMatrix)
 			case <-inputTick.C:
-				interpreter.TimerUpdate()
+				interpreter.TimerUpdate(rayl.PlayBeep)
 			}
 		}
 	}()
