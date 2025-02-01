@@ -7,6 +7,7 @@ import (
 	"os"
 
 	con "wumeno.8/constants"
+	"wumeno.8/w8_view"
 )
 
 type Interpreter struct {
@@ -30,7 +31,7 @@ type Interpreter struct {
 big endian (so for test_opcode.ch8, 124e is the first opcode, 13dc is last)
 */
 
-func (in *Interpreter) Start() {
+func (in *Interpreter) Start(program []byte) {
 	// empty them all, just in case
 	in.memory = [4096]byte{}
 	in.DisplayMatrix = [con.WIDTH][con.HEIGHT]bool{}
@@ -47,10 +48,6 @@ func (in *Interpreter) Start() {
 	}
 
 	// load program
-	program, err := os.ReadFile("6-keypad.ch8")
-	if err != nil {
-		panic(err)
-	}
 	for i := 0; i < len(program); i++ {
 		in.memory[i+int(in.programCounter)] = program[i]
 	}
@@ -60,7 +57,7 @@ func (in *Interpreter) Start() {
 func (in *Interpreter) UpdateCycle() {
 	// get opcode
 	opcode := uint16(in.memory[in.programCounter])<<8 | uint16(in.memory[in.programCounter+1])
-	fmt.Printf("0x%.3X: %.4X\n", in.programCounter, opcode)
+	//fmt.Printf("0x%.3X: %.4X\n", in.programCounter, opcode)
 	increase := 2 // default
 	switch opcode & 0xF000 {
 	case 0x0000:
@@ -81,14 +78,12 @@ func (in *Interpreter) UpdateCycle() {
 		// jump
 		increase = 0
 		in.programCounter = opcode & 0x0FFF
-		//fmt.Printf("jumped to %.3X\n", in.programCounter)
 	case 0x2000:
 		// execute subroutine at NNN
 		in.stack[in.stackPointer] = in.programCounter
 		increase = 0
 		in.stackPointer++
 		in.programCounter = opcode & 0x0FFF
-		//fmt.Printf("subroutined to %.3X\n", in.programCounter)
 	case 0x3000:
 		// skip next instruction if vx == nn
 		vx := in.registerV[(opcode&0x0F00)>>8]
@@ -187,7 +182,6 @@ func (in *Interpreter) UpdateCycle() {
 		vx := in.registerV[0x0]
 		increase = 0
 		in.programCounter = (opcode & 0x0FFF) + uint16(vx)
-		//fmt.Printf("jumped to %.3X\n", in.programCounter)
 	case 0xC000:
 		// set X to random
 		in.registerV[(opcode&0x0F00)>>8] = byte((opcode & 0x00FF) & uint16(rand.IntN(100)))
@@ -214,28 +208,30 @@ func (in *Interpreter) UpdateCycle() {
 		switch opcode & 0x00FF {
 		case 0x009E:
 			vx := in.registerV[(opcode&0x0F00)>>8]
-			key := in.inputs[vx]
+			//key := in.inputs[vx]
+			key := w8_view.GetHeldKey(con.KNOWN_KB[vx])
 			if key {
 				increase = 4
 			}
 		case 0x00A1:
 			vx := in.registerV[(opcode&0x0F00)>>8]
-			key := in.inputs[vx]
+			//key := in.inputs[vx]
+			key := w8_view.GetHeldKey(con.KNOWN_KB[vx])
 			if !key {
 				increase = 4
 			}
 		}
 	case 0xF000:
-		fmt.Printf("0x%.3X: %.4X\n", in.programCounter, opcode)
 		switch opcode & 0x00FF {
 		case 0x0007:
 			in.registerV[(opcode&0x0F00)>>8] = in.delayTimer
 		case 0x000A:
 			increase = 0
 			for i := range byte(0xF) {
-				if in.inputs[i] {
+				if w8_view.GetReleasedKey(con.KNOWN_KB[i]) {
 					in.registerV[(opcode&0x0F00)>>8] = i
 					increase = 2
+					in.inputs[i] = false
 					break
 				}
 			}
@@ -248,17 +244,12 @@ func (in *Interpreter) UpdateCycle() {
 		case 0x0029:
 			// fontset starts from mem address 0
 			vx := in.registerV[(opcode&0x0F00)>>8]
-			fmt.Println(vx)
 			in.indexRegister = uint16(5 * vx)
-			fmt.Printf("Hex to %.3X", in.indexRegister)
 		case 0x0033:
 			vx := in.registerV[(opcode&0x0F00)>>8]
 			in.memory[in.indexRegister] = vx / 100
 			in.memory[in.indexRegister+1] = (vx / 10) % 10
 			in.memory[in.indexRegister+2] = (vx % 100) % 10
-			for i := range uint16(3) {
-				fmt.Println(in.memory[in.indexRegister+i])
-			}
 		case 0x0055:
 			// use temp offset, save
 			totalregisters := uint16((opcode & 0x0F00) >> 8)
@@ -267,7 +258,6 @@ func (in *Interpreter) UpdateCycle() {
 			}
 		case 0x0065:
 			// load
-			fmt.Println("FF")
 			totalregisters := uint16((opcode & 0x0F00) >> 8)
 			for i := range totalregisters + 1 {
 				in.registerV[i] = in.memory[in.indexRegister+i]
@@ -287,7 +277,6 @@ func (in *Interpreter) UpdateCycle() {
 
 func (in *Interpreter) ReceiveInput(received [16]bool) {
 	in.inputs = received
-	in.TimerUpdate() // because input is at 60hz, we also do this
 }
 
 func (in *Interpreter) Terminate() {

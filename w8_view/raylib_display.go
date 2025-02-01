@@ -23,9 +23,6 @@ func (rayl *Raylib) Start() {
 		rayl.UpdateMatrix()
 		rl.EndDrawing()
 		for i, v := range con.KNOWN_KB {
-			if rayl.heldKeys[i] {
-				continue
-			}
 			rayl.heldKeys[i] = rl.IsKeyDown(v)
 		}
 	}
@@ -62,5 +59,12 @@ type inputFunc func([16]bool)
 
 func (rayl *Raylib) TrasmitHeldKeys(fn inputFunc) {
 	fn(rayl.heldKeys)
-	rayl.heldKeys = [16]bool{}
+}
+
+func GetHeldKey(key int32) bool {
+	return rl.IsKeyDown(key)
+}
+
+func GetReleasedKey(key int32) bool {
+	return rl.IsKeyReleased(key)
 }

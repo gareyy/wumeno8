@@ -3,6 +3,7 @@ package main
 // welcome to the controller of the MVC
 
 import (
+	"os"
 	"time"
 
 	"wumeno.8/w8_model"
@@ -18,7 +19,11 @@ func main() {
 	modelTick := time.NewTicker(2 * time.Millisecond)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-	interpreter.Start()
+	program, err := os.ReadFile("delay_timer_test.ch8")
+	if err != nil {
+		panic(err)
+	}
+	interpreter.Start(program)
 
 	go func() {
 		for {
@@ -26,10 +31,11 @@ func main() {
 			case <-done:
 				return
 			case <-modelTick.C:
+				rayl.TrasmitHeldKeys(interpreter.ReceiveInput)
 				interpreter.UpdateCycle()
 				rayl.CopyMatrix(interpreter.DisplayMatrix)
 			case <-inputTick.C:
-				rayl.TrasmitHeldKeys(interpreter.ReceiveInput)
+				interpreter.TimerUpdate()
 			}
 		}
 	}()
