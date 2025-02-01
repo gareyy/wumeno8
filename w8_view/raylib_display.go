@@ -76,5 +76,6 @@ func GetReleasedKey(key int32) bool {
 }
 
 func (rayl *Raylib) PlayBeep() {
+	// SOON: use raw audio stream and change between 440hz and 0hz
 	rl.PlaySound(rayl.Beep)
 }

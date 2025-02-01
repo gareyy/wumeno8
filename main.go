@@ -16,10 +16,10 @@ var interpreter = &w8_model.Interpreter{}
 
 func main() {
 	// use tickers for interpreter https://gobyexample.com/tickers
-	modelTick := time.NewTicker(2 * time.Millisecond)
+	modelTick := time.NewTicker(time.Second / 2000)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-	program, err := os.ReadFile("7-beep.ch8")
+	program, err := os.ReadFile("roms/br8kout.ch8")
 	if err != nil {
 		panic(err)
 	}

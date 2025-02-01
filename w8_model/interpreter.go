@@ -129,40 +129,44 @@ func (in *Interpreter) UpdateCycle() {
 		case 0x0004:
 			vx := &in.registerV[(opcode&0x0F00)>>8]
 			vy := &in.registerV[(opcode&0x00F0)>>4]
+			change := byte(0)
 			if int(*vx)+int(*vy) > 255 {
-				in.registerV[0xF] = 1
+				change = 1
 			}
 			*vx += *vy
+			in.registerV[0xF] = change
 		case 0x0005:
 			vx := &in.registerV[(opcode&0x0F00)>>8]
 			vy := &in.registerV[(opcode&0x00F0)>>4]
-			if int(*vx) > int(*vy) {
-				in.registerV[0xF] = 1
-			} else {
-				in.registerV[0xF] = 0
+			change := byte(0)
+			if int(*vx) >= int(*vy) {
+				change = 1
 			}
 			*vx -= *vy
+			in.registerV[0xF] = change
 		case 0x0007:
 			vx := &in.registerV[(opcode&0x0F00)>>8]
 			vy := &in.registerV[(opcode&0x00F0)>>4]
-			if int(*vx) < int(*vy) {
-				in.registerV[0xF] = 1
-			} else {
-				in.registerV[0xF] = 0
+			change := byte(0)
+			if int(*vx) <= int(*vy) {
+				change = 1
 			}
 			*vx = *vy - *vx
+			in.registerV[0xF] = change
 		case 0x0006:
 			// right shift
 			vx := &in.registerV[(opcode&0x0F00)>>8]
 			vy := in.registerV[(opcode&0x00F0)>>4]
-			in.registerV[0xF] = vy & 0x01
+			change := vy & 0x01
 			*vx = vy >> 1
+			in.registerV[0xF] = change
 		case 0x000E:
 			// left shift
 			vx := &in.registerV[(opcode&0x0F00)>>8]
 			vy := in.registerV[(opcode&0x00F0)>>4]
-			in.registerV[0xF] = vy & 0x80
+			change := (vy & 0x80) >> 7
 			*vx = vy << 1
+			in.registerV[0xF] = change
 		default:
 			fmt.Printf("Unknown: %.4X at pc %.3X\n", opcode, in.programCounter)
 			break
