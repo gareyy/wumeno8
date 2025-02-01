@@ -15,7 +15,7 @@ var interpreter = &w8_model.Interpreter{}
 
 func main() {
 	// use tickers for interpreter https://gobyexample.com/tickers
-	modelTick := time.NewTicker(10 * time.Millisecond)
+	modelTick := time.NewTicker(2 * time.Millisecond)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
 	interpreter.Start()

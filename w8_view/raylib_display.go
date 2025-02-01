@@ -7,7 +7,8 @@ import (
 
 type Raylib struct {
 	// implements InputOutput interface
-	Matrix [con.WIDTH][con.HEIGHT]bool
+	Matrix   [con.WIDTH][con.HEIGHT]bool
+	heldKeys [16]bool
 }
 
 func (rayl *Raylib) Start() {
@@ -21,6 +22,12 @@ func (rayl *Raylib) Start() {
 		rl.ClearBackground(rl.Black)
 		rayl.UpdateMatrix()
 		rl.EndDrawing()
+		for i, v := range con.KNOWN_KB {
+			if rayl.heldKeys[i] {
+				continue
+			}
+			rayl.heldKeys[i] = rl.IsKeyDown(v)
+		}
 	}
 }
 
@@ -54,9 +61,6 @@ func (rayl *Raylib) CopyMatrix(newMatrix [con.WIDTH][con.HEIGHT]bool) {
 type inputFunc func([16]bool)
 
 func (rayl *Raylib) TrasmitHeldKeys(fn inputFunc) {
-	var heldKeys [16]bool
-	for i, v := range con.KNOWN_KB {
-		heldKeys[i] = rl.IsKeyDown(v)
-	}
-	fn(heldKeys)
+	fn(rayl.heldKeys)
+	rayl.heldKeys = [16]bool{}
 }

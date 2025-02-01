@@ -2,6 +2,7 @@ package w8_model
 
 import (
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"os"
 
@@ -46,7 +47,7 @@ func (in *Interpreter) Start() {
 	}
 
 	// load program
-	program, err := os.ReadFile("test_opcode.ch8")
+	program, err := os.ReadFile("6-keypad.ch8")
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +60,7 @@ func (in *Interpreter) Start() {
 func (in *Interpreter) UpdateCycle() {
 	// get opcode
 	opcode := uint16(in.memory[in.programCounter])<<8 | uint16(in.memory[in.programCounter+1])
-
+	fmt.Printf("0x%.3X: %.4X\n", in.programCounter, opcode)
 	increase := 2 // default
 	switch opcode & 0xF000 {
 	case 0x0000:
@@ -69,9 +70,9 @@ func (in *Interpreter) UpdateCycle() {
 			in.DisplayMatrix = [con.WIDTH][con.HEIGHT]bool{}
 		case 0x00EE:
 			//return from subroutine
-			increase = 0
-			in.programCounter = in.stack[in.stackPointer]
+			increase = 2
 			in.stackPointer--
+			in.programCounter = in.stack[in.stackPointer]
 		default:
 			// execute machine subroutine, ignore
 			break
@@ -80,13 +81,14 @@ func (in *Interpreter) UpdateCycle() {
 		// jump
 		increase = 0
 		in.programCounter = opcode & 0x0FFF
-		fmt.Printf("jumped to %.3X\n", in.programCounter)
+		//fmt.Printf("jumped to %.3X\n", in.programCounter)
 	case 0x2000:
 		// execute subroutine at NNN
 		in.stack[in.stackPointer] = in.programCounter
 		increase = 0
 		in.stackPointer++
 		in.programCounter = opcode & 0x0FFF
+		//fmt.Printf("subroutined to %.3X\n", in.programCounter)
 	case 0x3000:
 		// skip next instruction if vx == nn
 		vx := in.registerV[(opcode&0x0F00)>>8]
@@ -121,7 +123,54 @@ func (in *Interpreter) UpdateCycle() {
 	case 0x8000:
 		// uh oh
 		switch opcode & 0x000F {
-
+		case 0x0000:
+			in.registerV[(opcode&0x0F00)>>8] = in.registerV[(opcode&0x00F0)>>4]
+		case 0x0001:
+			in.registerV[(opcode&0x0F00)>>8] |= in.registerV[(opcode&0x00F0)>>4]
+		case 0x0002:
+			in.registerV[(opcode&0x0F00)>>8] &= in.registerV[(opcode&0x00F0)>>4]
+		case 0x0003:
+			in.registerV[(opcode&0x0F00)>>8] ^= in.registerV[(opcode&0x00F0)>>4]
+		case 0x0004:
+			vx := &in.registerV[(opcode&0x0F00)>>8]
+			vy := &in.registerV[(opcode&0x00F0)>>4]
+			if int(*vx)+int(*vy) > 255 {
+				in.registerV[0xF] = 1
+			}
+			*vx += *vy
+		case 0x0005:
+			vx := &in.registerV[(opcode&0x0F00)>>8]
+			vy := &in.registerV[(opcode&0x00F0)>>4]
+			if int(*vx) > int(*vy) {
+				in.registerV[0xF] = 1
+			} else {
+				in.registerV[0xF] = 0
+			}
+			*vx -= *vy
+		case 0x0007:
+			vx := &in.registerV[(opcode&0x0F00)>>8]
+			vy := &in.registerV[(opcode&0x00F0)>>4]
+			if int(*vx) < int(*vy) {
+				in.registerV[0xF] = 1
+			} else {
+				in.registerV[0xF] = 0
+			}
+			*vx = *vy - *vx
+		case 0x0006:
+			// right shift
+			vx := &in.registerV[(opcode&0x0F00)>>8]
+			vy := in.registerV[(opcode&0x00F0)>>4]
+			in.registerV[0xF] = vy & 0x01
+			*vx = vy >> 1
+		case 0x000E:
+			// left shift
+			vx := &in.registerV[(opcode&0x0F00)>>8]
+			vy := in.registerV[(opcode&0x00F0)>>4]
+			in.registerV[0xF] = vy & 0x80
+			*vx = vy << 1
+		default:
+			fmt.Printf("Unknown: %.4X at pc %.3X\n", opcode, in.programCounter)
+			break
 		}
 	case 0x9000:
 		// skip next instruction if vx != vy
@@ -134,33 +183,118 @@ func (in *Interpreter) UpdateCycle() {
 		// set I to NNN
 		in.indexRegister = opcode & 0x0FFF
 	case 0xB000:
-		// jump with offset, uses super chip implementation
-		vx := in.registerV[(opcode&0x0F00)>>8]
+		// jump with offset, uses cosmac implementation
+		vx := in.registerV[0x0]
 		increase = 0
 		in.programCounter = (opcode & 0x0FFF) + uint16(vx)
+		//fmt.Printf("jumped to %.3X\n", in.programCounter)
 	case 0xC000:
 		// set X to random
 		in.registerV[(opcode&0x0F00)>>8] = byte((opcode & 0x00FF) & uint16(rand.IntN(100)))
 	case 0xD000:
 		// draw time!!
-		x := in.registerV[int32((opcode&0x0F00)>>8)]
-		y := in.registerV[int32((opcode&0x00F0)>>4)]
+		x := int32(in.registerV[int32((opcode&0x0F00)>>8)]) % con.WIDTH
+		y := int32(in.registerV[int32((opcode&0x00F0)>>4)]) % con.HEIGHT
 		height := opcode & 0x000F
 		in.registerV[0xF] = 0
-		for yoff := range height {
+		for yoff := range int32(height) {
 			line := byteToBoolArray(in.memory[in.indexRegister+uint16(yoff)])
-			for xoff := range 8 {
-				pos := &in.DisplayMatrix[int32(x)+int32(xoff)][int32(y)+int32(yoff)]
+			for xoff := range int32(8) {
+				if x+int32(xoff) >= con.WIDTH || y+int32(yoff) >= con.HEIGHT {
+					continue
+				}
+				pos := &in.DisplayMatrix[x+int32(xoff)][y+int32(yoff)]
 				if *pos && line[xoff] {
 					in.registerV[0xF] = 1
 				}
 				*pos = bool(line[xoff] != *pos)
 			}
 		}
+	case 0xE000:
+		switch opcode & 0x00FF {
+		case 0x009E:
+			vx := in.registerV[(opcode&0x0F00)>>8]
+			key := in.inputs[vx]
+			if key {
+				increase = 4
+			}
+		case 0x00A1:
+			vx := in.registerV[(opcode&0x0F00)>>8]
+			key := in.inputs[vx]
+			if !key {
+				increase = 4
+			}
+		}
+	case 0xF000:
+		fmt.Printf("0x%.3X: %.4X\n", in.programCounter, opcode)
+		switch opcode & 0x00FF {
+		case 0x0007:
+			in.registerV[(opcode&0x0F00)>>8] = in.delayTimer
+		case 0x000A:
+			increase = 0
+			for i := range byte(0xF) {
+				if in.inputs[i] {
+					in.registerV[(opcode&0x0F00)>>8] = i
+					increase = 2
+					break
+				}
+			}
+		case 0x0015:
+			in.delayTimer = in.registerV[(opcode&0x0F00)>>8]
+		case 0x0018:
+			in.soundTimer = in.registerV[(opcode&0x0F00)>>8]
+		case 0x001E:
+			in.indexRegister += uint16(in.registerV[(opcode&0x0F00)>>8])
+		case 0x0029:
+			// fontset starts from mem address 0
+			vx := in.registerV[(opcode&0x0F00)>>8]
+			fmt.Println(vx)
+			in.indexRegister = uint16(5 * vx)
+			fmt.Printf("Hex to %.3X", in.indexRegister)
+		case 0x0033:
+			vx := in.registerV[(opcode&0x0F00)>>8]
+			in.memory[in.indexRegister] = vx / 100
+			in.memory[in.indexRegister+1] = (vx / 10) % 10
+			in.memory[in.indexRegister+2] = (vx % 100) % 10
+			for i := range uint16(3) {
+				fmt.Println(in.memory[in.indexRegister+i])
+			}
+		case 0x0055:
+			// use temp offset, save
+			totalregisters := uint16((opcode & 0x0F00) >> 8)
+			for i := range totalregisters + 1 {
+				in.memory[in.indexRegister+i] = in.registerV[i]
+			}
+		case 0x0065:
+			// load
+			fmt.Println("FF")
+			totalregisters := uint16((opcode & 0x0F00) >> 8)
+			for i := range totalregisters + 1 {
+				in.registerV[i] = in.memory[in.indexRegister+i]
+			}
+		}
 	default:
 		fmt.Printf("Unknown: %.4X at pc %.3X\n", opcode, in.programCounter)
 		break
 	}
+
+	// then increase
+	in.programCounter += uint16(increase)
+	if in.programCounter < 0x200 || in.programCounter > 0xFFF {
+		log.Panicf("Invalid position for pc %.3X\n", in.programCounter)
+	}
+}
+
+func (in *Interpreter) ReceiveInput(received [16]bool) {
+	in.inputs = received
+	in.TimerUpdate() // because input is at 60hz, we also do this
+}
+
+func (in *Interpreter) Terminate() {
+	os.Exit(0)
+}
+
+func (in *Interpreter) TimerUpdate() {
 	// timers
 	if in.delayTimer > 0 {
 		in.delayTimer--
@@ -171,17 +305,6 @@ func (in *Interpreter) UpdateCycle() {
 		}
 		in.soundTimer--
 	}
-
-	// then increase
-	in.programCounter += uint16(increase)
-}
-
-func (in *Interpreter) ReceiveInput(received [16]bool) {
-	in.inputs = received
-}
-
-func (in *Interpreter) Terminate() {
-	os.Exit(0)
 }
 
 func byteToBoolArray(b byte) [8]bool {
