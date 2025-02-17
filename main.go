@@ -19,7 +19,7 @@ func main() {
 	modelTick := time.NewTicker(time.Second / 2000)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-	program, err := os.ReadFile("roms/br8kout.ch8")
+	program, err := os.ReadFile("roms/6-keypad.ch8")
 	if err != nil {
 		panic(err)
 	}
