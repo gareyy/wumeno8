@@ -3,6 +3,7 @@ package main
 // welcome to the controller of the MVC
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -15,11 +16,15 @@ var rayl = &w8_view.Raylib{}
 var interpreter = &w8_model.Interpreter{}
 
 func main() {
-	// use tickers for interpreter https://gobyexample.com/tickers
 	modelTick := time.NewTicker(time.Second / 2000)
 	inputTick := time.NewTicker(time.Second / 60)
 	done := make(chan bool)
-	program, err := os.ReadFile("roms/6-keypad.ch8")
+	args := os.Args[1:]
+	if len(args) != 1 {
+		panic(errors.New("No rom provided or too many arguments"))
+	}
+	filename := args[0]
+	program, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
